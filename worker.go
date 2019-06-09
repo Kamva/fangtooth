@@ -37,6 +37,7 @@ func (w *WorkerContext) CaptureError(job *work.Job, next work.NextMiddlewareFunc
 			if e, ok := err.(exceptions.GenericException); ok {
 				reportMessage = e.GetErrorMessage()
 				reportTags = e.GetTags()
+				golog.Warn(err)
 			} else {
 				reportMessage = fmt.Sprint(err)
 				reportTags = map[string]string{"exceptions": "unknown", "type": fmt.Sprintf("%T", err)}
@@ -47,8 +48,7 @@ func (w *WorkerContext) CaptureError(job *work.Job, next work.NextMiddlewareFunc
 				raven.NewException(errors.New(reportMessage), raven.NewStacktrace(2, 3, nil)),
 			)
 
-			golog.Fatal(packet.Message)
-			golog.Debug(err)
+			golog.Error("[PANIC] " + packet.Message)
 
 			raven.Capture(packet, reportTags)
 		}
@@ -58,7 +58,6 @@ func (w *WorkerContext) CaptureError(job *work.Job, next work.NextMiddlewareFunc
 
 	if err != nil {
 		golog.Error(err.Error())
-		golog.Debug(err)
 		sentry.CaptureError(err, map[string]string{"worker": "true", "job": job.ID})
 	} else {
 		golog.Infof("Job %s with ID %s proceed successfully.", job.Name, job.ID)
