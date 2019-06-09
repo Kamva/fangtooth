@@ -8,11 +8,8 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-// Handler is a function to process a job.
-type Handler func(*work.Job) error
-
-// Middleware is a function works as a middleware.
-type Middleware func(*work.Job, work.NextMiddlewareFunc) error
+// JobHandlerMap is a map of job name and its handler function.
+type JobHandlerMap map[string]interface{}
 
 // Configurator is a function that accept worker pool as parameter and change
 // its configurable attributes.
@@ -28,16 +25,20 @@ type WorkerPool struct {
 }
 
 // Middleware will add given middleware to process pipeline.
-func (p *WorkerPool) Middleware(m Middleware) *WorkerPool {
-	p.pool.Middleware(m)
+func (p *WorkerPool) Middleware(m ...interface{}) *WorkerPool {
+	for _, middleware := range m {
+		p.pool.Middleware(middleware)
+	}
 
 	return p
 }
 
 // Listen will listens for incoming job with specified job name and handle it
 // with its handler function.
-func (p *WorkerPool) Listen(jobName string, handler Handler) *WorkerPool {
-	p.pool.Job(jobName, handler)
+func (p *WorkerPool) Listen(jobMap JobHandlerMap) *WorkerPool {
+	for jobName, handler := range jobMap {
+		p.pool.Job(jobName, handler)
+	}
 
 	return p
 }
@@ -68,7 +69,9 @@ func NewWorkerPool(worker WorkerInterface, namespace string, redisPool *redis.Po
 		wp.ConcurrentProcess = 1
 	}
 
-	wp.pool = work.NewWorkerPool(worker, wp.ConcurrentProcess, wp.namespace, wp.redisPool)
+	wp.pool = work.NewWorkerPool(worker.Self(), wp.ConcurrentProcess, wp.namespace, wp.redisPool)
+
+	wp.Middleware(worker.Log, worker.CaptureError)
 
 	return wp
 }

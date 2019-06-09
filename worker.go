@@ -14,6 +14,7 @@ import (
 type WorkerInterface interface {
 	Log(*work.Job, work.NextMiddlewareFunc) error
 	CaptureError(*work.Job, work.NextMiddlewareFunc) error
+	Self() interface{}
 }
 
 // WorkerContext is base worker context
