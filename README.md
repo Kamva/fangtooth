@@ -1,4 +1,4 @@
-# Whale
+# Fangtooth
 
 Fangtooth is a bootstrap for queue workers.  
 
