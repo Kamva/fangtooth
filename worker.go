@@ -8,6 +8,7 @@ import (
 	"github.com/Kamva/shark/sentry"
 	"github.com/getsentry/raven-go"
 	"github.com/gocraft/work"
+	"github.com/kataras/golog"
 )
 
 // WorkerInterface is an interface for workers contexts.
@@ -22,7 +23,7 @@ type WorkerContext struct{}
 
 // Log is middleware that log the currently being processed job.
 func (w *WorkerContext) Log(job *work.Job, next work.NextMiddlewareFunc) error {
-	fmt.Printf("Starting job from queue %s with ID %s\r\n", job.Name, job.ID)
+	golog.Infof("Starting job from queue %s with ID %s", job.Name, job.ID)
 	return next()
 }
 
@@ -45,6 +46,10 @@ func (w *WorkerContext) CaptureError(job *work.Job, next work.NextMiddlewareFunc
 				"Notification Worker Error: "+reportMessage,
 				raven.NewException(errors.New(reportMessage), raven.NewStacktrace(2, 3, nil)),
 			)
+
+			golog.Fatal(packet.Message)
+			golog.Debug(err)
+
 			raven.Capture(packet, reportTags)
 		}
 	}()
@@ -52,7 +57,11 @@ func (w *WorkerContext) CaptureError(job *work.Job, next work.NextMiddlewareFunc
 	err := next()
 
 	if err != nil {
+		golog.Error(err.Error())
+		golog.Debug(err)
 		sentry.CaptureError(err, map[string]string{"worker": "true", "job": job.ID})
+	} else {
+		golog.Infof("Job %s with ID %s proceed successfully.", job.Name, job.ID)
 	}
 
 	return err
