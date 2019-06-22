@@ -44,7 +44,7 @@ func (w *WorkerContext) CaptureError(job *work.Job, next work.NextMiddlewareFunc
 			}
 
 			packet := raven.NewPacket(
-				"Notification Worker Error: "+reportMessage,
+				"Worker Error: "+reportMessage,
 				raven.NewException(errors.New(reportMessage), raven.NewStacktrace(2, 3, nil)),
 			)
 
