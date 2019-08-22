@@ -11,6 +11,9 @@ import (
 // JobHandlerMap is a map of job name and its handler function.
 type JobHandlerMap map[string]interface{}
 
+// PeriodicMap is a map of cron tab value and job name to run in.
+type PeriodicMap map[string]string
+
 // Configurator is a function that accept worker pool as parameter and change
 // its configurable attributes.
 type Configurator func(*WorkerPool)
@@ -28,6 +31,15 @@ type WorkerPool struct {
 func (p *WorkerPool) Middleware(m ...interface{}) *WorkerPool {
 	for _, middleware := range m {
 		p.pool.Middleware(middleware)
+	}
+
+	return p
+}
+
+// Periodic will periodically enqueue given jobs based on it cron tabs.
+func (p *WorkerPool) Periodic(jobMap PeriodicMap) *WorkerPool {
+	for jobName, cronTab := range jobMap {
+		p.pool.PeriodicallyEnqueue(cronTab, jobName)
 	}
 
 	return p
