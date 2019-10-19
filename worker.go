@@ -3,6 +3,7 @@ package fangtooth
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/Kamva/shark/exceptions"
 	"github.com/Kamva/shark/sentry"
@@ -43,6 +44,8 @@ func (w *WorkerContext) CaptureError(job *work.Job, next work.NextMiddlewareFunc
 				reportTags = map[string]string{"exceptions": "unknown", "type": fmt.Sprintf("%T", err)}
 			}
 
+			w.tagJobInfo(reportTags, job)
+
 			packet := raven.NewPacket(
 				"Worker Error: "+reportMessage,
 				raven.NewException(errors.New(reportMessage), raven.NewStacktrace(2, 3, nil)),
@@ -58,10 +61,20 @@ func (w *WorkerContext) CaptureError(job *work.Job, next work.NextMiddlewareFunc
 
 	if err != nil {
 		golog.Error(err.Error())
-		sentry.CaptureError(err, map[string]string{"worker": "true", "job": job.ID})
+		tags := map[string]string{"worker": "true"}
+
+		w.tagJobInfo(tags, job)
+
+		sentry.CaptureError(err, tags)
 	} else {
 		golog.Infof("Job %s with ID %s proceed successfully.", job.Name, job.ID)
 	}
 
 	return err
+}
+
+func (w *WorkerContext) tagJobInfo(tags map[string]string, job *work.Job) {
+	tags["job"] = job.Name
+	tags["job_id"] = job.ID
+	tags["fails"] = strconv.Itoa(int(job.Fails))
 }
